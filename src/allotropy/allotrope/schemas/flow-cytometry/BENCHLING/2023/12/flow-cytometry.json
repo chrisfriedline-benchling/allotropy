@@ -1,0 +1,106 @@
+{
+  "$id": "http://purl.allotrope.org/json-schemas/adm/flow-cytometry/BENCHLING/2023/12/flow_cytometry.schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "flow cytomeytry aggregate document": {
+      "type": "object",
+      "properties": {
+        "flow cytometry document": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "measurement aggregate document": {
+                "type": "object",
+                "properties": {
+                  "measurement document": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "experimental data identifier": {
+                          "type": "string"
+                        },
+                        "processed data aggregate document": {
+                          "type": "object",
+                          "properties": {
+                            "processed data document": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "data processing document": {
+                                    "type": "object",
+                                    "properties": {
+                                      "data processing identifier": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "event population aggregate document": {
+                                    "type": "object",
+                                    "properties": {
+                                      "event population document": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "population identifier": {
+                                              "type": "string"
+                                            },
+                                            "population name": {
+                                              "type": "string"
+                                            },
+                                            "population size": {
+                                              "type": "object",
+                                              "properties": {
+                                                "value": {
+                                                  "type": "number"
+                                                },
+                                                "unit": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            },
+                                            "population percentage of parentage": {
+                                              "type": "object",
+                                              "properties": {
+                                                "parental parent identifier": {
+                                                  "type": "string"
+                                                },
+                                                "proportion size": {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "value": {
+                                                      "type": "number"
+                                                    },
+                                                    "unit": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
