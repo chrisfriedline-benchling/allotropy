@@ -4,33 +4,47 @@
   "type": "object",
   "properties": {
     "flow cytomeytry aggregate document": {
+      "$asm.property-class": "",
+      "$asm.pattern": "aggregate datum",
       "type": "object",
       "properties": {
         "flow cytometry document": {
+          "$asm.property-class": "",
+          "$asm.pattern": "aggregate datum",
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "measurement aggregate document": {
+                "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002374",
+                "$asm.pattern": "aggregate datum",
                 "type": "object",
                 "properties": {
                   "measurement document": {
+                    "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002375",
+                    "$asm.array-ordered": false,
+                    "$asm.array-mixed": false,
+                    "$asm.pattern": "indexed datum",
                     "type": "array",
                     "items": {
+                      "$asm.pattern": "aggregate datum",
                       "type": "object",
                       "properties": {
                         "experimental data identifier": {
                           "type": "string"
                         },
                         "processed data aggregate document": {
+                          "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002658",
                           "type": "object",
                           "properties": {
                             "processed data document": {
+                              "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002659",
                               "type": "array",
                               "items": {
                                 "type": "object",
                                 "properties": {
                                   "data processing document": {
+                                    "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002655",
                                     "type": "object",
                                     "properties": {
                                       "data processing identifier": {
