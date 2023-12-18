@@ -21,12 +21,12 @@
                 "type": "object",
                 "properties": {
                   "measurement document": {
-                    "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002375",
                     "$asm.array-ordered": false,
                     "$asm.array-mixed": false,
                     "$asm.pattern": "indexed datum",
                     "type": "array",
                     "items": {
+                      "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002375",
                       "$asm.pattern": "aggregate datum",
                       "type": "object",
                       "properties": {
@@ -38,9 +38,9 @@
                           "type": "object",
                           "properties": {
                             "processed data document": {
-                              "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002659",
                               "type": "array",
                               "items": {
+                                "$asm.property-class": "http://purl.allotrope.org/ontologies/result#AFR_0002659",
                                 "type": "object",
                                 "properties": {
                                   "data processing document": {
