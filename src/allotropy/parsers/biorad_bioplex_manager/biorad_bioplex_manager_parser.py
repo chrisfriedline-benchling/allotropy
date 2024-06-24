@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 import xml.etree.ElementTree as Et
 
-from allotropy.allotrope.models.multi_analyte_profiling_benchling_2024_01_multi_analyte_profiling import (
+from allotropy.allotrope.models.adm.multi_analyte_profiling.benchling._2024._01.multi_analyte_profiling import (
     AnalyteAggregateDocument,
     AnalyteDocumentItem,
     DataSystemDocument,
@@ -58,6 +58,7 @@ from allotropy.parsers.biorad_bioplex_manager.constants import (
     VERSION_ATTRIB,
     WELLS_TAG,
 )
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.utils.uuids import random_uuid_str
 from allotropy.parsers.utils.values import (
     get_val_from_xml,
@@ -67,6 +68,14 @@ from allotropy.parsers.vendor_parser import VendorParser
 
 
 class BioradBioplexParser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "Bio-Rad Bio-Plex Manager"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def to_allotrope(self, named_file_contents: NamedFileContents) -> Model:
         contents = named_file_contents.contents.read()
         xml_tree = Et.ElementTree(Et.fromstring(contents))  # noqa: S314
@@ -93,7 +102,7 @@ class BioradBioplexParser(VendorParser):
                     well_system_metadata
                 )
                 all_wells_xml = child
-        multi_docs = BioradBioplexParser._get_measurement_document_aggregate(
+        multi_docs = self.get_measurement_document_aggregate(
             samples_xml=all_samples_xml,
             wells_xml=all_wells_xml,
             regions_of_interest=well_system_metadata.regions_of_interest,
@@ -136,13 +145,13 @@ class BioradBioplexParser(VendorParser):
             file_name=file_name,
         )
 
-    @staticmethod
-    def _get_measurement_document_aggregate(
+    def get_measurement_document_aggregate(
+        self,
         samples_xml: Et.Element,
         wells_xml: Et.Element,
         regions_of_interest: list[str],
-        experimental_data_id: Optional[str],
-        experiment_type: Optional[str],
+        experimental_data_id: str | None,
+        experiment_type: str | None,
         plate_well_count: int,
         analytical_method_identifier: str,
     ) -> list[MultiAnalyteProfilingDocumentItem]:
@@ -154,9 +163,11 @@ class BioradBioplexParser(VendorParser):
             device_well_settings = DeviceWellSettings.create(well)
             measurement_doc = MeasurementDocumentItem(
                 measurement_identifier=random_uuid_str(),
-                measurement_time=device_well_settings.acquisition_time,
+                measurement_time=self._get_date_time(
+                    device_well_settings.acquisition_time
+                ),
                 assay_bead_count=TQuantityValueNumber(
-                    device_well_settings.well_total_events
+                    value=device_well_settings.well_total_events
                 ),
                 sample_document=BioradBioplexParser._get_sample_document(
                     sample, well_name
@@ -178,7 +189,7 @@ class BioradBioplexParser(VendorParser):
                     measurement_aggregate_document=MeasurementAggregateDocument(
                         measurement_document=[measurement_doc],
                         experiment_type=experiment_type,
-                        plate_well_count=TQuantityValueNumber(plate_well_count),
+                        plate_well_count=TQuantityValueNumber(value=plate_well_count),
                         analytical_method_identifier=analytical_method_identifier,
                         container_type=CONTAINER_TYPE,
                         experimental_data_identifier=experimental_data_id,
@@ -208,14 +219,14 @@ class BioradBioplexParser(VendorParser):
         device_control_doc_item = DeviceControlDocumentItem(
             device_type=DEVICE_TYPE,
             sample_volume_setting=TQuantityValueMicroliter(
-                device_well_settings.sample_volume_setting
+                value=device_well_settings.sample_volume_setting
             ),
-            dilution_factor_setting=TQuantityValueUnitless(sample.sample_dilution)
+            dilution_factor_setting=TQuantityValueUnitless(value=sample.sample_dilution)
             if sample.sample_dilution is not None
             else None,
             detector_gain_setting=device_well_settings.detector_gain_setting,
-            minimum_assay_bead_count_setting=TQuantityValueUnitless(
-                device_well_settings.minimum_assay_bead_count_setting
+            minimum_assay_bead_count_setting=TQuantityValueNumber(
+                value=device_well_settings.minimum_assay_bead_count_setting
             )
             if device_well_settings.minimum_assay_bead_count_setting is not None
             else None,
@@ -250,7 +261,7 @@ class BioradBioplexParser(VendorParser):
                                 analyte_name=analyte_structure_doc.analyte_name,
                                 assay_bead_identifier=analyte_structure_doc.assay_bead_identifier,
                                 assay_bead_count=TQuantityValueNumber(
-                                    analyte_structure_doc.assay_bead_count
+                                    value=analyte_structure_doc.assay_bead_count
                                 ),
                                 fluorescence=TQuantityValueRelativeFluorescenceUnit(
                                     value=analyte_structure_doc.fluorescence,

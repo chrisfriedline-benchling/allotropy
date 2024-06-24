@@ -1,10 +1,22 @@
 import json
-import os
 from pathlib import Path
-import re
 from typing import Any
 
-SCHEMAS_DIR = os.path.join(Path(__file__).parent, "schemas")
+from allotropy.allotrope.schema_parser.path_util import (
+    get_full_schema_path,
+    get_schema_path_from_manifest,
+    SHARED_SCHEMAS_DEFINITIONS_PATH,
+)
+
+
+def get_shared_definitions() -> dict[str, Any]:
+    with open(Path(SHARED_SCHEMAS_DEFINITIONS_PATH, "definitions.json")) as f:
+        return json.load(f)  # type: ignore[no-any-return]
+
+
+def get_shared_unit_definitions() -> dict[str, Any]:
+    with open(Path(SHARED_SCHEMAS_DEFINITIONS_PATH, "units.json")) as f:
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 def add_definitions(schema: dict[str, Any]) -> dict[str, Any]:
@@ -14,26 +26,16 @@ def add_definitions(schema: dict[str, Any]) -> dict[str, Any]:
         ("custom", "custom"),
     ]:
         existing = schema.get(f"${section}", {})
-        with open(
-            os.path.join(SCHEMAS_DIR, "shared", "definitions", f"{file}.json")
-        ) as f:
+        with open(Path(SHARED_SCHEMAS_DEFINITIONS_PATH, f"{file}.json")) as f:
             additional = json.load(f)
         additional.update(existing)
         schema[f"${section}"] = additional
     return schema
 
 
-def get_schema(schema_relative_path: str) -> dict[str, Any]:
-    with open(os.path.join(SCHEMAS_DIR, schema_relative_path)) as f:
+def get_schema(schema_path: Path) -> dict[str, Any]:
+    with open(get_full_schema_path(schema_path)) as f:
         return add_definitions(json.load(f))
-
-
-def get_schema_path_from_manifest(manifest: str) -> str:
-    match = re.match(r"http://purl.allotrope.org/manifests/(.*)\.manifest", manifest)
-    if not match:
-        msg = f"No matching schema in repo for manifest: {manifest}"
-        raise ValueError(msg)
-    return f"{match.groups()[0]}.json"
 
 
 def get_schema_from_manifest(manifest: str) -> dict[str, Any]:

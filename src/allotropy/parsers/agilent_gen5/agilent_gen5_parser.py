@@ -1,7 +1,7 @@
 from collections.abc import Sequence
-from typing import Any, Union
+from typing import Any
 
-from allotropy.allotrope.models.plate_reader_benchling_2023_09_plate_reader import (
+from allotropy.allotrope.models.adm.plate_reader.benchling._2023._09.plate_reader import (
     CalculatedDataAggregateDocument,
     CalculatedDataDocumentItem,
     ContainerType,
@@ -46,20 +46,21 @@ from allotropy.parsers.agilent_gen5.constants import (
 )
 from allotropy.parsers.agilent_gen5.section_reader import SectionLinesReader
 from allotropy.parsers.lines_reader import read_to_lines
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.vendor_parser import VendorParser
 
-MeasurementDocumentItems = Union[
-    UltravioletAbsorbancePointDetectionMeasurementDocumentItems,
-    FluorescencePointDetectionMeasurementDocumentItems,
-    LuminescencePointDetectionMeasurementDocumentItems,
-]
+MeasurementDocumentItems = (
+    UltravioletAbsorbancePointDetectionMeasurementDocumentItems
+    | FluorescencePointDetectionMeasurementDocumentItems
+    | LuminescencePointDetectionMeasurementDocumentItems
+)
 
-MeasurementDocumentAttributeClasses = Union[
-    TQuantityValueDegreeCelsius,
-    TQuantityValueMillimeter,
-    TQuantityValueNanometer,
-    TQuantityValueNumber,
-]
+MeasurementDocumentAttributeClasses = (
+    TQuantityValueDegreeCelsius
+    | TQuantityValueMillimeter
+    | TQuantityValueNanometer
+    | TQuantityValueNumber
+)
 
 
 def get_instance_or_none(
@@ -69,6 +70,14 @@ def get_instance_or_none(
 
 
 class AgilentGen5Parser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "Agilent Gen5"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def _create_model(self, plate_data: PlateData, file_name: str) -> Model:
         header_data = plate_data.header_data
         results = plate_data.results
@@ -111,7 +120,9 @@ class AgilentGen5Parser(VendorParser):
                     for well_position in results.wells
                 ],
                 calculated_data_aggregate_document=(
-                    CalculatedDataAggregateDocument(calculated_data_document)
+                    CalculatedDataAggregateDocument(
+                        calculated_data_document=calculated_data_document
+                    )
                     if calculated_data_document
                     else None
                 ),
@@ -145,7 +156,7 @@ class AgilentGen5Parser(VendorParser):
                 measurement_time=self._get_date_time(header_data.datetime),
                 analytical_method_identifier=header_data.protocol_file_path,
                 experimental_data_identifier=header_data.experiment_file_path,
-                plate_well_count=TQuantityValueNumber(plate_well_count),
+                plate_well_count=TQuantityValueNumber(value=plate_well_count),
                 container_type=ContainerType.well_plate,
                 measurement_document=list(measurement_document),
             )
@@ -189,7 +200,7 @@ class AgilentGen5Parser(VendorParser):
                                 value=self._get_wavelength_from_label(measurement.label)
                             ),
                             number_of_averages=(
-                                TQuantityValueNumber(read_data.number_of_averages)
+                                TQuantityValueNumber(value=read_data.number_of_averages)
                                 if read_data.number_of_averages
                                 else None
                             ),
@@ -197,7 +208,7 @@ class AgilentGen5Parser(VendorParser):
                         )
                     ]
                 ),
-                absorbance=TQuantityValueMilliAbsorbanceUnit(measurement.value),
+                absorbance=TQuantityValueMilliAbsorbanceUnit(value=measurement.value),
                 compartment_temperature=get_instance_or_none(
                     TQuantityValueDegreeCelsius, plate_data.compartment_temperature
                 ),
@@ -256,7 +267,9 @@ class AgilentGen5Parser(VendorParser):
                         )
                     ]
                 ),
-                fluorescence=TQuantityValueRelativeFluorescenceUnit(measurement.value),
+                fluorescence=TQuantityValueRelativeFluorescenceUnit(
+                    value=measurement.value
+                ),
                 compartment_temperature=get_instance_or_none(
                     TQuantityValueDegreeCelsius, plate_data.compartment_temperature
                 ),
@@ -303,7 +316,9 @@ class AgilentGen5Parser(VendorParser):
                             )
                         ]
                     ),
-                    luminescence=TQuantityValueRelativeLightUnit(measurement.value),
+                    luminescence=TQuantityValueRelativeLightUnit(
+                        value=measurement.value
+                    ),
                 )
             )
         return measurement_document

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from allotropy.allotrope.models.light_obscuration_benchling_2023_12_light_obscuration import (
+from allotropy.allotrope.models.adm.light_obscuration.benchling._2023._12.light_obscuration import (
     DeviceSystemDocument,
     DistributionAggregateDocument,
     DistributionItem,
@@ -16,7 +16,6 @@ from allotropy.parser_factory import Vendor
 from allotropy.parsers.beckman_pharmspec.beckman_pharmspec_parser import PharmSpecParser
 from allotropy.parsers.utils.timestamp_parser import TimestampParser
 from allotropy.testing.utils import from_file, validate_contents
-from allotropy.to_allotrope import allotrope_from_file
 
 VENDOR_TYPE = Vendor.BECKMAN_PHARMSPEC
 
@@ -132,12 +131,6 @@ def test_get_model(test_file: Path) -> None:
                 .particle_size
             )
             assert test.value == particle_size
-
-
-@pytest.mark.short
-def test_asm(test_file: Path) -> None:
-    asm = allotrope_from_file(str(test_file), VENDOR_TYPE)
-    assert isinstance(asm, dict)
 
 
 @pytest.mark.short

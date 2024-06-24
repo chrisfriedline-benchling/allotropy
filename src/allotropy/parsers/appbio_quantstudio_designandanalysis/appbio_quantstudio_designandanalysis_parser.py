@@ -1,13 +1,18 @@
-from typing import Optional
+import pandas as pd
 
-from allotropy.allotrope.models.pcr_benchling_2023_09_qpcr import (
+from allotropy.allotrope.models.adm.pcr.benchling._2023._09.qpcr import (
     BaselineCorrectedReporterDataCube,
+    CalculatedDataDocumentItem,
     ContainerType,
     DataProcessingDocument,
+    DataProcessingDocument1,
+    DataSourceAggregateDocument,
+    DataSourceDocumentItem,
     DataSystemDocument,
     DeviceControlAggregateDocument,
     DeviceControlDocumentItem,
     DeviceSystemDocument,
+    ExperimentType,
     MeasurementAggregateDocument,
     MeasurementDocumentItem,
     MeltingCurveDataCube,
@@ -20,6 +25,7 @@ from allotropy.allotrope.models.pcr_benchling_2023_09_qpcr import (
     QPCRDocumentItem,
     ReporterDyeDataCube,
     SampleDocument,
+    TCalculatedDataAggregateDocument,
 )
 from allotropy.allotrope.models.shared.definitions.custom import (
     TNullableQuantityValueUnitless,
@@ -37,18 +43,33 @@ from allotropy.named_file_contents import NamedFileContents
 from allotropy.parsers.appbio_quantstudio_designandanalysis.appbio_quantstudio_designandanalysis_contents import (
     DesignQuantstudioContents,
 )
+from allotropy.parsers.appbio_quantstudio_designandanalysis.appbio_quantstudio_designandanalysis_data_creator import (
+    create_data,
+)
 from allotropy.parsers.appbio_quantstudio_designandanalysis.appbio_quantstudio_designandanalysis_structure import (
     Data,
     Well,
     WellItem,
 )
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.vendor_parser import VendorParser
 
 
 class AppBioQuantStudioDesignandanalysisParser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "AppBio QuantStudio Design & Analysis"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def to_allotrope(self, named_file_contents: NamedFileContents) -> Model:
-        contents = DesignQuantstudioContents(named_file_contents.contents)
-        data = Data.create(contents)
+        raw_contents = pd.read_excel(
+            named_file_contents.contents, header=None, sheet_name=None
+        )
+        contents = DesignQuantstudioContents(raw_contents)
+        data = create_data(contents)
         return self._get_model(data, named_file_contents.original_file_name)
 
     def _get_model(self, data: Data, file_name: str) -> Model:
@@ -78,7 +99,49 @@ class AppBioQuantStudioDesignandanalysisParser(VendorParser):
                     )
                     for well in data.wells
                 ],
+                calculated_data_aggregate_document=self.get_calculated_data_aggregate_document(
+                    data
+                ),
             )
+        )
+
+    def get_calculated_data_aggregate_document(
+        self, data: Data
+    ) -> TCalculatedDataAggregateDocument | None:
+        if not data.calculated_documents:
+            return None
+
+        return TCalculatedDataAggregateDocument(
+            calculated_data_document=[
+                CalculatedDataDocumentItem(
+                    calculated_data_identifier=calc_doc.uuid,
+                    data_source_aggregate_document=DataSourceAggregateDocument(
+                        data_source_document=[
+                            DataSourceDocumentItem(
+                                data_source_identifier=(
+                                    data_source.reference.uuid
+                                    if data_source.reference
+                                    else None
+                                ),
+                                data_source_feature=data_source.feature,
+                            )
+                            for data_source in calc_doc.data_sources
+                        ],
+                    ),
+                    data_processing_document=(
+                        DataProcessingDocument1(
+                            reference_DNA_description=data.reference_target,
+                            reference_sample_description=data.reference_sample,
+                        )
+                        if data.experiment_type
+                        == ExperimentType.relative_standard_curve_qPCR_experiment
+                        else None
+                    ),
+                    calculated_data_name=calc_doc.name,
+                    calculated_datum=TQuantityValueUnitless(value=calc_doc.value),
+                )
+                for calc_doc in data.calculated_documents
+            ],
         )
 
     def get_measurement_aggregate_document(
@@ -257,7 +320,7 @@ class AppBioQuantStudioDesignandanalysisParser(VendorParser):
 
     def get_reporter_dye_data_cube(
         self, well: Well, well_item: WellItem
-    ) -> Optional[ReporterDyeDataCube]:
+    ) -> ReporterDyeDataCube | None:
         if well.multicomponent_data is None or well_item.reporter_dye_setting is None:
             return None
 
@@ -289,7 +352,7 @@ class AppBioQuantStudioDesignandanalysisParser(VendorParser):
 
     def get_passive_reference_dye_data_cube(
         self, data: Data, well: Well
-    ) -> Optional[PassiveReferenceDyeDataCube]:
+    ) -> PassiveReferenceDyeDataCube | None:
         if (
             well.multicomponent_data is None
             or data.header.passive_reference_dye_setting is None
@@ -326,7 +389,7 @@ class AppBioQuantStudioDesignandanalysisParser(VendorParser):
 
     def get_melting_curve_data_cube(
         self, well_item: WellItem
-    ) -> Optional[MeltingCurveDataCube]:
+    ) -> MeltingCurveDataCube | None:
         if well_item.melt_curve_data is None:
             return None
 

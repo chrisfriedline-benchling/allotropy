@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Optional
 
 import pandas as pd
 import pytest
 
-from allotropy.allotrope.models.pcr_benchling_2023_09_qpcr import ExperimentType
+from allotropy.allotrope.models.adm.pcr.benchling._2023._09.qpcr import ExperimentType
 from allotropy.exceptions import AllotropeConversionError
 from allotropy.named_file_contents import NamedFileContents
 from allotropy.parsers.appbio_quantstudio.appbio_quantstudio_data_creator import (
@@ -18,9 +17,11 @@ from allotropy.parsers.appbio_quantstudio.appbio_quantstudio_structure import (
     Result,
     WellItem,
 )
-from allotropy.parsers.appbio_quantstudio.calculated_document import CalculatedDocument
-from allotropy.parsers.appbio_quantstudio.referenceable import Referenceable
 from allotropy.parsers.lines_reader import LinesReader, read_to_lines
+from allotropy.parsers.utils.calculated_data_documents.definition import (
+    CalculatedDocument,
+    Referenceable,
+)
 from allotropy.types import IOType
 from tests.parsers.appbio_quantstudio.appbio_quantstudio_data import (
     get_broken_calc_doc_data,
@@ -33,9 +34,6 @@ from tests.parsers.appbio_quantstudio.appbio_quantstudio_data import (
 
 def rm_uuid(data: Data) -> Data:
     for well in data.wells:
-        for doc in well.calculated_documents:
-            rm_uuid_calc_doc(doc)
-
         for well_item in well.items.values():
             well_item.uuid = ""
 
@@ -54,12 +52,13 @@ def rm_uuid_calc_doc(calc_doc: CalculatedDocument) -> None:
             source.reference.uuid = ""
 
 
-def _read_to_lines(io_: IOType, encoding: Optional[str] = None) -> list[str]:
+def _read_to_lines(io_: IOType, encoding: str | None = None) -> list[str]:
     named_file_contents = NamedFileContents(io_, "test.csv", encoding=encoding)
     return read_to_lines(named_file_contents)
 
 
 @pytest.mark.short
+@pytest.mark.quantstudio
 def test_header_builder_returns_header_instance() -> None:
     header_contents = get_raw_header_contents()
 
@@ -67,6 +66,7 @@ def test_header_builder_returns_header_instance() -> None:
     assert isinstance(Header.create(LinesReader(lines)), Header)
 
 
+@pytest.mark.quantstudio
 def test_header_builder() -> None:
     device_identifier = "device1"
     model_number = "123"
@@ -106,6 +106,8 @@ def test_header_builder() -> None:
     )
 
 
+@pytest.mark.short
+@pytest.mark.quantstudio
 @pytest.mark.parametrize(
     "parameter,expected_error",
     [
@@ -115,10 +117,8 @@ def test_header_builder() -> None:
             "Expected non-null value for Quantification Cycle Method.",
         ),
         ("pcr_detection_chemistry", "Expected non-null value for Chemistry."),
-        ("plate_well_count", "Expected non-null value for Block Type."),
     ],
 )
-@pytest.mark.short
 def test_header_builder_required_parameter_none_then_raise(
     parameter: str, expected_error: str
 ) -> None:
@@ -130,28 +130,54 @@ def test_header_builder_required_parameter_none_then_raise(
 
 
 @pytest.mark.short
-def test_header_builder_invalid_plate_well_count() -> None:
+@pytest.mark.quantstudio
+def test_header_builder_plate_well_count() -> None:
+    header_contents = get_raw_header_contents(plate_well_count="96 plates")
+    lines = _read_to_lines(header_contents)
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count == 96
+
+    header_contents = get_raw_header_contents(plate_well_count="Fast 96 plates")
+    lines = _read_to_lines(header_contents)
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count == 96
+
+    header_contents = get_raw_header_contents(plate_well_count="384 plates")
+    lines = _read_to_lines(header_contents)
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count == 384
+
+    header_contents = get_raw_header_contents(plate_well_count="Fast 384 plates")
+    lines = _read_to_lines(header_contents)
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count == 384
+
+    header_contents = get_raw_header_contents(plate_well_count="200 plates")
+    lines = _read_to_lines(header_contents)
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count is None
+
     header_contents = get_raw_header_contents(plate_well_count="0 plates")
     lines = _read_to_lines(header_contents)
-    with pytest.raises(
-        AllotropeConversionError, match="Unable to find plate well count"
-    ):
-        Header.create(LinesReader(lines))
+    header = Header.create(LinesReader(lines))
+    assert header.plate_well_count is None
 
 
 @pytest.mark.short
+@pytest.mark.quantstudio
 def test_header_builder_no_header_then_raise() -> None:
     header_contents = get_raw_header_contents(raw_text="")
     lines = _read_to_lines(header_contents, encoding="UTF-8")
     lines_reader = LinesReader(lines)
     with pytest.raises(
         AllotropeConversionError,
-        match="Expected non-null value for Experiment Run End Time.",
+        match="Expected non-null value for Block Type.",
     ):
         Header.create(lines_reader)
 
 
 @pytest.mark.short
+@pytest.mark.quantstudio
 def test_results_builder() -> None:
 
     data = pd.DataFrame(
@@ -183,6 +209,7 @@ def test_results_builder() -> None:
 
 
 @pytest.mark.short
+@pytest.mark.quantstudio
 @pytest.mark.parametrize(
     "test_filepath,expected_data",
     [
@@ -216,21 +243,20 @@ def test_data_builder(test_filepath: str, expected_data: Data) -> None:
 
 
 def get_raw_header_contents(
-    raw_text: Optional[str] = None,
-    measurement_time: Optional[str] = "2010-10-01 01:44:54 AM EDT",
-    plate_well_count: Optional[str] = "96-Well Block (0.2mL)",
-    experiment_type: Optional[str] = "Presence/Absence",
-    device_identifier: Optional[str] = "278880034",
-    model_number: Optional[str] = "QuantStudio(TM) 6 Flex System",
-    device_serial_number: Optional[str] = "278880034",
-    measurement_method_identifier: Optional[str] = "Ct",
-    pcr_detection_chemistry: Optional[str] = "TAQMAN",
-    passive_reference_dye_setting: Optional[str] = "ROX",
-    barcode: Optional[str] = "NA",
-    analyst: Optional[str] = "NA",
-    experimental_data_identifier: Optional[
-        str
-    ] = "QuantStudio 96-Well Presence-Absence Example",
+    raw_text: str | None = None,
+    measurement_time: str | None = "2010-10-01 01:44:54 AM EDT",
+    plate_well_count: str | None = "96-Well Block (0.2mL)",
+    experiment_type: str | None = "Presence/Absence",
+    device_identifier: str | None = "278880034",
+    model_number: str | None = "QuantStudio(TM) 6 Flex System",
+    device_serial_number: str | None = "278880034",
+    measurement_method_identifier: str | None = "Ct",
+    pcr_detection_chemistry: str | None = "TAQMAN",
+    passive_reference_dye_setting: str | None = "ROX",
+    barcode: str | None = "NA",
+    analyst: str | None = "NA",
+    experimental_data_identifier: None
+    | (str) = "QuantStudio 96-Well Presence-Absence Example",
 ) -> BytesIO:
     if raw_text is not None:
         return BytesIO(raw_text.encode("utf-8"))

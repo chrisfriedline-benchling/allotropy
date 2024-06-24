@@ -1,9 +1,9 @@
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 from pandas import Timestamp
 
-from allotropy.allotrope.models.cell_counting_benchling_2023_11_cell_counting import (
+from allotropy.allotrope.models.adm.cell_counting.benchling._2023._11.cell_counting import (
     CellCountingAggregateDocument,
     CellCountingDetectorDeviceControlAggregateDocument,
     CellCountingDetectorMeasurementDocumentItem,
@@ -36,6 +36,7 @@ from allotropy.parsers.chemometec_nucleoview.constants import (
     NUCLEOCOUNTER_SOFTWARE_NAME,
 )
 from allotropy.parsers.chemometec_nucleoview.nucleoview_reader import NucleoviewReader
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.utils.uuids import random_uuid_str
 from allotropy.parsers.vendor_parser import VendorParser
 
@@ -49,7 +50,7 @@ _PROPERTY_LOOKUP = {
 }
 
 
-def _get_value(data_frame: pd.DataFrame, row: int, column: str) -> Optional[Any]:
+def _get_value(data_frame: pd.DataFrame, row: int, column: str) -> Any | None:
     if column not in data_frame.columns:
         return None
     return data_frame[column][row]
@@ -57,7 +58,7 @@ def _get_value(data_frame: pd.DataFrame, row: int, column: str) -> Optional[Any]
 
 def get_property_from_sample(
     data_frame: pd.DataFrame, row: int, property_name: str
-) -> Optional[Any]:
+) -> Any | None:
     value = _get_value(data_frame, row, property_name)
     if value is None:
         return None
@@ -77,6 +78,14 @@ def get_property_from_sample(
 
 
 class ChemometecNucleoviewParser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "ChemoMetec Nucleoview"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def to_allotrope(self, named_file_contents: NamedFileContents) -> Model:
         contents = named_file_contents.contents
         filename = named_file_contents.original_file_name
@@ -111,7 +120,7 @@ class ChemometecNucleoviewParser(VendorParser):
             if _get_value(data, i, "Total (cells/ml)")
         ]
 
-    def _get_date_time_or_epoch(self, time_val: Optional[Timestamp]) -> TDateTimeValue:
+    def _get_date_time_or_epoch(self, time_val: Timestamp | None) -> TDateTimeValue:
         if time_val is None:
             # return epoch time 1970-01-01
             return self._get_date_time("1970-01-01")

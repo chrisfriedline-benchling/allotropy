@@ -4,7 +4,27 @@ We welcome community contributions to this library and we hope that together we 
 
 In order to contribute you will need to have an Individual or Corporate Contributor License Agreement (CLA) on file with Benchling depending on if you are contributing on your own time or as part of another company. When you make your first pull request we will check if you have a CLA and if not take care of that with you first. The process is quick and painless and helps us to make sure that you and everyone who uses your code in the future is protected.
 
-Allotropy follows a [fork and pull model](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models#fork-and-pull-model). To start, fork a copy of the Allotropy repository in GitHub onto your own account and then create your local repository of the fork.  
+Allotropy follows a [fork and pull model](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models#fork-and-pull-model). To start, fork a copy of the Allotropy repository in GitHub onto your own account and then create your local repository of the fork.
+
+## Contribution conventions
+
+### PR title
+The PR title must have a prefix (`<prefix>: <description>`) and must have one of the following prefixes:
+
+* `feat`: A new feature
+* `fix`: A bug fix
+* `docs`: Documentation only changes
+* `style`: Stylistic only changes (e.g. whitespace, formatting)
+* `refactor`: Refactor only changes (e.g. moving code, reorganizing classes)
+* `perf`: Performance only changes
+* `test`: A change that only introduces new tests or test data
+* `chore`: A change to internal systems (e.g. build, ci, dependencies) that does not affect tests
+
+## CHANGELOG
+Every PR that starts with `feat` or `fix` must have a changelog entry. This ensures that all changes that affect
+the library output are documented in the changelog.
+
+If your change affects existing test cases or adds new tests with new features, it should almost certainly have a `feat` or `fix` prefix.
 
 ## GPG keys and signed commits
 All commits to this repository must be signed. To set up commit signatures, please do the following:
@@ -41,6 +61,8 @@ In this case we already have some code in the library to handle instruments of t
 2. Either:
   - A `Structure` file that the `Parser` uses to build an in memory representation of the instrument data that can be serialized to ASM.
   - A `Reader` file that the `Parser` uses to read directly from the file, if accessing the file data does not require much logic.
+
+See our [tutorial](docs/tutorial.md) for a deeper dive on contributing to the `allotropy` library!
 
 ## If the ASM schema you need is not available
 

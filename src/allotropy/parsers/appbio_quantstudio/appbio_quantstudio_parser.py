@@ -1,6 +1,4 @@
-from typing import Optional
-
-from allotropy.allotrope.models.pcr_benchling_2023_09_qpcr import (
+from allotropy.allotrope.models.adm.pcr.benchling._2023._09.qpcr import (
     BaselineCorrectedReporterDataCube,
     CalculatedDataDocumentItem,
     ContainerType,
@@ -34,6 +32,7 @@ from allotropy.allotrope.models.shared.definitions.custom import (
 )
 from allotropy.allotrope.models.shared.definitions.definitions import (
     FieldComponentDatatype,
+    InvalidJsonFloat,
     TDatacubeComponent,
     TDatacubeData,
     TDatacubeStructure,
@@ -50,10 +49,19 @@ from allotropy.parsers.appbio_quantstudio.appbio_quantstudio_structure import (
     WellItem,
 )
 from allotropy.parsers.lines_reader import LinesReader, read_to_lines
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.vendor_parser import VendorParser
 
 
 class AppBioQuantStudioParser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "AppBio QuantStudio RT-PCR"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def to_allotrope(self, named_file_contents: NamedFileContents) -> Model:
         lines = read_to_lines(named_file_contents)
         reader = LinesReader(lines)
@@ -86,7 +94,11 @@ class AppBioQuantStudioParser(VendorParser):
                             experiment_type=data.header.experiment_type,
                             container_type=ContainerType.qPCR_reaction_block,
                             plate_well_count=TQuantityValueNumber(
-                                value=data.header.plate_well_count
+                                value=(
+                                    InvalidJsonFloat.NaN
+                                    if data.header.plate_well_count is None
+                                    else data.header.plate_well_count
+                                )
                             ),
                             measurement_document=[
                                 self.get_measurement_document_item(
@@ -95,9 +107,6 @@ class AppBioQuantStudioParser(VendorParser):
                                 for well_item in well.items.values()
                             ],
                         ),
-                        calculated_data_aggregate_document=self.get_inner_calculated_data_aggregate_document(
-                            well
-                        ),
                     )
                     for well in data.wells
                 ],
@@ -105,35 +114,6 @@ class AppBioQuantStudioParser(VendorParser):
                     data
                 ),
             )
-        )
-
-    def get_inner_calculated_data_aggregate_document(
-        self, well: Well
-    ) -> Optional[TCalculatedDataAggregateDocument]:
-        if not well.calculated_documents:
-            return None
-
-        return TCalculatedDataAggregateDocument(
-            calculated_data_document=[
-                CalculatedDataDocumentItem(
-                    calculated_data_identifier=calculated_document.uuid,
-                    data_source_aggregate_document=DataSourceAggregateDocument(
-                        data_source_document=[
-                            DataSourceDocumentItem(
-                                data_source_identifier=data_source.reference.uuid,
-                                data_source_feature=data_source.feature,
-                            )
-                            for data_source in calculated_document.data_sources
-                        ],
-                    ),
-                    calculated_data_name=calculated_document.name,
-                    calculated_data_description=None,
-                    calculated_datum=TQuantityValueUnitless(
-                        value=calculated_document.value
-                    ),
-                )
-                for calculated_document in well.calculated_documents
-            ],
         )
 
     def get_outer_calculated_data_aggregate_document(
@@ -313,7 +293,7 @@ class AppBioQuantStudioParser(VendorParser):
 
     def get_reporter_dye_data_cube(
         self, well: Well, well_item: WellItem
-    ) -> Optional[ReporterDyeDataCube]:
+    ) -> ReporterDyeDataCube | None:
         if well.multicomponent_data is None or well_item.reporter_dye_setting is None:
             return None
 
@@ -345,7 +325,7 @@ class AppBioQuantStudioParser(VendorParser):
 
     def get_passive_reference_dye_data_cube(
         self, data: Data, well: Well
-    ) -> Optional[PassiveReferenceDyeDataCube]:
+    ) -> PassiveReferenceDyeDataCube | None:
         if (
             well.multicomponent_data is None
             or data.header.passive_reference_dye_setting is None
@@ -380,7 +360,7 @@ class AppBioQuantStudioParser(VendorParser):
             ),
         )
 
-    def get_melting_curve_data_cube(self, well: Well) -> Optional[MeltingCurveDataCube]:
+    def get_melting_curve_data_cube(self, well: Well) -> MeltingCurveDataCube | None:
         if well.melt_curve_raw_data is None:
             return None
 

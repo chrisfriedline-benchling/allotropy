@@ -9,6 +9,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+## [0.1.35] - 2024-06-24
+
+### Added
+
+- Add Mabtech Apex adapter
+- Added support for parsing Vi-Cell XR txt files
+- Add Electrophoresis BENCHLING/2024/06 schema.
+- Added github enforcement that CHANGELOG.md is updated
+- Added test files Agilent TapeStation Analysis
+- Added requirements for remaining parsers to /docs
+- Add Alphalisa assay support to Gen5 adapter
+- Add fluorescence point detection measurement extension to Spectrophotometry BENCHLING/2023/12 schema
+
+### Fixed
+
+### Changed
+
+- Redefine plate well count as optional in AppBio Quantstudio
+- Updated README.md to organize parsers according to maturity level
+
+### Deprecated
+
+### Removed
+
+### Security
+
+## [0.1.35] - 2024-06-07
+
+### Added
+
+- Luminex Xponent parser able to process output as pure csv file.
+
+### Fixed
+
+- Improved way of infer reference sample and DNA target in AppBio Quantstudio Design and Analysis
+- Fix model number and device id in ctl immunospot
+
+### Deprecated
+
+- Sample role type removed from Roche Cedex Bioht
+
+## [0.1.34] - 2024-06-04
+
+### Added
+
+- Add Methodical Mind adapter
+
+### Fixed
+
+- Fixed missing genotyping determination result in AppBio Quantstudio Design and Analysis
+- Fixed empty space at beginin of sample identifier in Revvity Kaleido
+
+### Changed
+
+- Use modular paths for schema models
+
+## [0.1.33] - 2024-05-29
+
+### Fixed
+
+- Fixed path_util to work outside of allotropy corectly
+
+## [0.1.32] - 2024-05-29
+
+### Added
+
+- Add schema_parser/path_util.py to remove dependency: converter.py -> generate_schemas.py, which pulled script dependencies into allotropy
+
+## [0.1.31] - 2024-05-24
+
+### Added
+
+- Script to create graph visualization of calculated data documents from asm json files
+- Details of parser requirements to docs
+- Add Agilent Gen5 Image Adapter
+- Add CTL Immunospot adapter
+
+### Fixed
+
+- Fixed missing required field in cell-counting 2023/11 schema
+- Fixed missing required field in 2023/09 lum/fluor/abs plate reader schemas
+
+### Changed
+
+- Upgraded allotropy python requirement to python 10
+- Updated ASM model class typing to use or union
+- Implement default value for sample role names in AppBio Quantstudio
+- Added kw_only=True for generated schema models
+
+## [0.1.30] - 2024-05-10
+
+### Added
+
+- Global definition of calculated data documents representation
+- Update bioplex to use \_get_date_time
+- Add structure for Methodical Mind
+
+### Fixed
+
+- Remove duplicated ct sd and ct se calculated data documents in Quantstudio Design and Analysis adapter
+- Remove duplicated quantity mean calculated data documents from AppBio Quantstudio adapter
+
+### Changed
+
+- Update multianalyte model minimum_assay_bead_count to be of type "number" insetead of "unitless"
+- Update luminex and biorad bioplex to use updated multianalyte model
+- Remove inner calculated data documents from AppBio Quantstudio
+- Use global definition of calculated data documents in AppBio Quantstudio and Quantstudio Design and Analysis adapters
+
+## [0.1.29] - 2024-04-30
+
+### Added
+
+- Add Vendor display names
+- Added liquid-chromatograpy 2023/09 schema
+
+### Changed
+
+- Improved schema model generation script to handle more complicated schemas
+
+### Removed
+
+- Remove assert in validate_contents
+
+## [0.1.28] - 2024-04-29
+
+### Added
+
 - Add AppBio Quantstudio Design and Analysis adapter
 - Add software version to Chemometec Nucleoview
 - Biorad Bioplex adapter
@@ -21,16 +159,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Re-added encoding inference to Beckman VI Cell Blu adapter
 - Corrected concentration unit in Lunatic to conform to unit as reported within the source file
+- Corrected Luminex xPonent adapter to output one multi analyte profiling document per well.
+- Remove duplicated calculated data documents of delta ct se in AppBio Quantstudio
 
 ### Changed
 
 - Use new plate reader schema in gen5 adapter
-
-### Deprecated
-
-### Removed
-
-### Security
 
 ## [0.1.27] - 2024-04-10
 
@@ -355,7 +489,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial commit, includes support for:
   - Agilent Gen5
-  - Applied Bio QuantStudio
+  - AppBio QuantStudio
   - Beckman Vi-Cell BLU
   - Beckman Vi-Cell XR
   - MolDev SoftMax Pro

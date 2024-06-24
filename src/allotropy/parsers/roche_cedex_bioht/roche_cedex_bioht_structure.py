@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Optional
 
 import pandas as pd
 
@@ -22,8 +21,8 @@ from allotropy.parsers.roche_cedex_bioht.roche_cedex_bioht_reader import (
 class Title:
     data_processing_time: str
     analyst: str
-    model_number: Optional[str]
-    device_serial_number: Optional[str]
+    model_number: str | None
+    device_serial_number: str | None
 
     @staticmethod
     def create(title_data: pd.Series) -> Title:
@@ -48,14 +47,14 @@ class Title:
 @dataclass(frozen=True)
 class Analyte:
     name: str
-    concentration_value: Optional[float]
-    unit: Optional[str]
+    concentration_value: float | None
+    unit: str | None
 
     @staticmethod
     def create(data: pd.Series) -> Analyte:
         analyte_name: str = data.get("analyte name")  # type: ignore[assignment]
-        concentration_value: Optional[float] = data.get("concentration value")  # type: ignore[assignment]
-        unit: Optional[str] = data.get("concentration unit")  # type: ignore[assignment]
+        concentration_value: float | None = data.get("concentration value")  # type: ignore[assignment]
+        unit: str | None = data.get("concentration unit")  # type: ignore[assignment]
 
         return Analyte(analyte_name, concentration_value, unit)
 
@@ -149,23 +148,16 @@ class AnalyteList:
 @dataclass(frozen=True)
 class Sample:
     name: str
-    role_type: str
     measurement_time: str
     analyte_list: AnalyteList
-    batch: Optional[str] = None
+    batch: str | None = None
 
     @staticmethod
-    def create(name: str, batch: Optional[str], samples_data: pd.DataFrame) -> Sample:
-        condition = samples_data["sample identifier"] == name
-        condition &= samples_data["batch identifier"] == batch
-        sample_data = samples_data[condition].sort_values(by="analyte name")
-
-        role_type = sample_data.iloc[0]["sample role type"]
+    def create(name: str, batch: str | None, sample_data: pd.DataFrame) -> Sample:
         measurement_time = str(sample_data.iloc[0]["measurement time"])
 
         return Sample(
             name,
-            role_type,
             measurement_time,
             AnalyteList.create(sample_data),
             batch=batch or None,
@@ -179,12 +171,13 @@ class Data:
 
     @staticmethod
     def create(reader: RocheCedexBiohtReader) -> Data:
-        # A sample group is defined by both the sample and the batch identifier
-        sample_groups = reader.samples_data.groupby(
-            ["sample identifier", "batch identifier"]
-        ).groups.keys()
-
         return Data(
             title=Title.create(reader.title_data),
-            samples=[Sample.create(name, batch, reader.samples_data) for name, batch in sample_groups],  # type: ignore[has-type, misc]
+            samples=[
+                Sample.create(name, batch, samples_data.sort_values(by="analyte name"))
+                for (name, batch), samples_data in reader.samples_data.groupby(
+                    # A sample group is defined by both the sample and the batch identifier
+                    ["sample identifier", "batch identifier"]
+                )
+            ],
         )

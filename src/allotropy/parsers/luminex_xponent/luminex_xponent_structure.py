@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import StringIO
 import re
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -20,9 +20,10 @@ from allotropy.parsers.utils.values import (
 
 LUMINEX_EMPTY_PATTERN = r"^[,\"\s]*$"
 CALIBRATION_BLOCK_HEADER = "Most Recent Calibration and Verification Results"
-TABLE_HEADER_PATTERN = '"DataType:","{}"'
+TABLE_HEADER_PATTERN = '^"?DataType:"?,"?{}"?'
 MINIMUM_CALIBRATION_LINE_COLS = 2
 EXPECTED_CALIBRATION_RESULT_LEN = 2
+EXPECTED_HEADER_COLUMNS = 7
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ class Header:
     measurement_time: str
     detector_gain_setting: str
     data_system_instance_identifier: str
-    analyst: Optional[str] = None
+    analyst: str | None = None
 
     @classmethod
     def create(cls, header_data: pd.DataFrame) -> Header:
@@ -149,7 +150,7 @@ class Measurement:
     dilution_factor_setting: float
     assay_bead_count: float
     analytes: list[Analyte]
-    errors: Optional[list[str]] = None
+    errors: list[str] | None = None
 
     @classmethod
     def create(
@@ -201,7 +202,7 @@ class Measurement:
     @classmethod
     def _get_errors(
         cls, errors_data: pd.DataFrame, well_location: str
-    ) -> Optional[list[str]]:
+    ) -> list[str] | None:
         try:
             measurement_errors = errors_data.loc[well_location]
         except KeyError:
@@ -293,15 +294,23 @@ class Data:
 
     @classmethod
     def _get_header_data(cls, reader: CsvReader) -> pd.DataFrame:
-        header_lines = assert_not_none(
-            reader.pop_until(CALIBRATION_BLOCK_HEADER), "Unable to find Header block."
-        )
+        header_lines = list(reader.pop_until(CALIBRATION_BLOCK_HEADER))
+
+        n_columns = 0
+        for line in header_lines:
+            n_row_columns = len(line.split(","))
+            if n_row_columns > n_columns:
+                n_columns = n_row_columns
+
+        if n_columns < EXPECTED_HEADER_COLUMNS:
+            error = "Unable to parse header. Not enough data."
+            raise AllotropeConversionError(error)
 
         header_data = read_csv(
             StringIO("\n".join(header_lines)),
             header=None,
             index_col=0,
-            names=range(7),
+            names=range(n_columns),
         ).dropna(how="all")
 
         return header_data.T
@@ -325,8 +334,8 @@ class Data:
 
     @classmethod
     def _get_minimum_bead_count_setting(cls, reader: CsvReader) -> float:
-        reader.drop_until(match_pat='"Samples",')
-        samples_info = assert_not_none(reader.pop(), "Unable to find Samples info.")
+        reader.drop_until(match_pat='^"?Samples"?,')
+        samples_info = assert_not_none(reader.pop(), msg="Unable to find Samples info.")
         try:
             min_bead_count_setting = samples_info.replace('"', "").split(",")[3]
         except IndexError as e:

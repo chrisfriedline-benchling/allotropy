@@ -1,8 +1,26 @@
 from collections.abc import Mapping
-from typing import Optional, Union
 
 import pandas as pd
 
+from allotropy.allotrope.models.adm.spectrophotometry.benchling._2023._12.spectrophotometry import (
+    CalculatedDataAggregateDocument,
+    CalculatedDataDocumentItem,
+    DataSourceAggregateDocument,
+    DataSourceDocumentItem,
+    DataSystemDocument,
+    DeviceSystemDocument,
+    FluorescencePointDetectionMeasurementDocumentItems,
+    MeasurementAggregateDocument,
+    Model,
+    ProcessedDataAggregateDocument,
+    ProcessedDataDocumentItem,
+    SampleDocument,
+    SpectrophotometryAggregateDocument,
+    SpectrophotometryDocumentItem,
+    UltravioletAbsorbancePointDetectionDeviceControlAggregateDocument,
+    UltravioletAbsorbancePointDetectionDeviceControlDocumentItem,
+    UltravioletAbsorbancePointDetectionMeasurementDocumentItems,
+)
 from allotropy.allotrope.models.shared.definitions.custom import (
     TQuantityValueMicrogramPerMicroliter,
     TQuantityValueMicrogramPerMilliliter,
@@ -19,26 +37,9 @@ from allotropy.allotrope.models.shared.definitions.definitions import (
     TQuantityValue,
 )
 from allotropy.allotrope.models.shared.definitions.units import UNITLESS
-from allotropy.allotrope.models.spectrophotometry_benchling_2023_12_spectrophotometry import (
-    CalculatedDataAggregateDocument,
-    CalculatedDataDocumentItem,
-    DataSourceAggregateDocument,
-    DataSourceDocumentItem,
-    DataSystemDocument,
-    DeviceSystemDocument,
-    MeasurementAggregateDocument,
-    Model,
-    ProcessedDataAggregateDocument,
-    ProcessedDataDocumentItem,
-    SampleDocument,
-    SpectrophotometryAggregateDocument,
-    SpectrophotometryDocumentItem,
-    UltravioletAbsorbancePointDetectionDeviceControlAggregateDocument,
-    UltravioletAbsorbancePointDetectionDeviceControlDocumentItem,
-    UltravioletAbsorbancePointDetectionMeasurementDocumentItems,
-)
 from allotropy.constants import ASM_CONVERTER_NAME, ASM_CONVERTER_VERSION
 from allotropy.named_file_contents import NamedFileContents
+from allotropy.parsers.release_state import ReleaseState
 from allotropy.parsers.thermo_fisher_nanodrop_eight.nanodrop_eight_reader import (
     NanoDropEightReader,
 )
@@ -46,22 +47,22 @@ from allotropy.parsers.utils.uuids import random_uuid_str
 from allotropy.parsers.utils.values import assert_not_none
 from allotropy.parsers.vendor_parser import VendorParser
 
-ConcentrationType = Union[
-    TQuantityValueMicrogramPerMicroliter,
-    TQuantityValueMicrogramPerMilliliter,
-    TQuantityValueMilligramPerMilliliter,
-    TQuantityValueNanogramPerMicroliter,
-    TQuantityValueNanogramPerMilliliter,
-    TQuantityValuePicogramPerMilliliter,
-]
-ConcentrationClassType = Union[
-    type[TQuantityValueMicrogramPerMicroliter],
-    type[TQuantityValueMicrogramPerMilliliter],
-    type[TQuantityValueMilligramPerMilliliter],
-    type[TQuantityValueNanogramPerMicroliter],
-    type[TQuantityValueNanogramPerMilliliter],
-    type[TQuantityValuePicogramPerMilliliter],
-]
+ConcentrationType = (
+    TQuantityValueMicrogramPerMicroliter
+    | TQuantityValueMicrogramPerMilliliter
+    | TQuantityValueMilligramPerMilliliter
+    | TQuantityValueNanogramPerMicroliter
+    | TQuantityValueNanogramPerMilliliter
+    | TQuantityValuePicogramPerMilliliter
+)
+ConcentrationClassType = (
+    type[TQuantityValueMicrogramPerMicroliter]
+    | type[TQuantityValueMicrogramPerMilliliter]
+    | type[TQuantityValueMilligramPerMilliliter]
+    | type[TQuantityValueNanogramPerMicroliter]
+    | type[TQuantityValueNanogramPerMilliliter]
+    | type[TQuantityValuePicogramPerMilliliter]
+)
 
 CONCENTRATION_UNIT_TO_TQUANTITY: Mapping[str, ConcentrationClassType] = {
     "ug/ul": TQuantityValueMicrogramPerMicroliter,
@@ -73,7 +74,7 @@ CONCENTRATION_UNIT_TO_TQUANTITY: Mapping[str, ConcentrationClassType] = {
 }
 
 
-def _get_str_or_none(data_frame: pd.DataFrame, row: int, column: str) -> Optional[str]:
+def _get_str_or_none(data_frame: pd.DataFrame, row: int, column: str) -> str | None:
     if column not in data_frame.columns:
         return None
 
@@ -99,9 +100,7 @@ def _get_float(data_frame: pd.DataFrame, row: int, column: str) -> JsonFloat:
         return InvalidJsonFloat.NaN
 
 
-def _get_concentration(
-    conc: JsonFloat, unit: Optional[str]
-) -> Optional[ConcentrationType]:
+def _get_concentration(conc: JsonFloat, unit: str | None) -> ConcentrationType | None:
     if unit and unit in CONCENTRATION_UNIT_TO_TQUANTITY and isinstance(conc, float):
         cls = CONCENTRATION_UNIT_TO_TQUANTITY[unit]
         return cls(value=conc)
@@ -110,6 +109,14 @@ def _get_concentration(
 
 
 class NanodropEightParser(VendorParser):
+    @property
+    def display_name(self) -> str:
+        return "Thermo Fisher NanoDrop Eight"
+
+    @property
+    def release_state(self) -> ReleaseState:
+        return ReleaseState.RECOMMENDED
+
     def to_allotrope(self, named_file_contents: NamedFileContents) -> Model:
         data = NanoDropEightReader.read(named_file_contents)
         data = self._add_measurement_uuids(data)
@@ -236,7 +243,14 @@ class NanodropEightParser(VendorParser):
 
     def _get_measurement_document(
         self, data: pd.DataFrame, row: int
-    ) -> list[UltravioletAbsorbancePointDetectionMeasurementDocumentItems]:
+    ) -> list[
+        FluorescencePointDetectionMeasurementDocumentItems
+        | UltravioletAbsorbancePointDetectionMeasurementDocumentItems
+    ]:
+        measurement_docs: list[
+            FluorescencePointDetectionMeasurementDocumentItems
+            | UltravioletAbsorbancePointDetectionMeasurementDocumentItems
+        ]
         measurement_docs = []
         na_type = _get_str_or_none(data, row, "na type")
         concentration_col = self._get_concentration_col(data)
@@ -290,7 +304,7 @@ class NanodropEightParser(VendorParser):
                         ]
                     ),
                     absorbance=TQuantityValueMilliAbsorbanceUnit(
-                        _get_float(data, row, "a260")
+                        value=_get_float(data, row, "a260")
                     ),
                 )
             )
@@ -339,14 +353,14 @@ class NanodropEightParser(VendorParser):
                         ]
                     ),
                     absorbance=TQuantityValueMilliAbsorbanceUnit(
-                        _get_float(data, row, a280_col)
+                        value=_get_float(data, row, a280_col)
                     ),
                 )
             )
 
         return measurement_docs
 
-    def _get_concentration_col(self, data: pd.DataFrame) -> Optional[str]:
+    def _get_concentration_col(self, data: pd.DataFrame) -> str | None:
         for col in data.columns:
             if col.lower() in ["conc.", "conc", "concentration"]:
                 return col
